@@ -1,6 +1,6 @@
 
 #' @title Get Token
-#' @description getToken() returns a token needed to run getArthroCollections() and getPools(). The function prompts users for a VectorSurv account credentials.
+#' @description getToken() returns a token needed to run getArthroCollections() and getPools(). Prints agencies associated with account credentials. The function prompts users for a VectorSurv account credentials.
 #' @keywords authentication
 #' @return User token
 #' @importFrom rstudioapi askForPassword
@@ -30,18 +30,18 @@ getToken = function(){
   response <- POST( url = "https:/api.vectorsurv.org/login", body = body, add_headers(headers))
 
   response_content <- content(response, 'parsed')
-
   if(is.null(response_content$token)){
-    stop("Check username and password")
+    stop("Error, check returned response above")
   }
     token <- response_content$token
-  # ids = c()
-  # for (i in 1:length(response_content$agencies)){
-  #
-  #   ids = rbind(ids,cbind(response_content$agencies[[i]]$id,response_content$agencies[[i]]$code))
-  #
-  # }
+    agencies = c()
+   for (i in 1:length(response_content$agencies)){
 
+     agencies = rbind(agencies,paste("Id:",response_content$agencies[[i]]$id,"Name:",response_content$agencies[[i]]$name, sep=" "))
+
+   }
+
+  print(agencies)
 
   return(token)
 }
