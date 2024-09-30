@@ -5,19 +5,19 @@
 #' @param start_year  Beginning of year range
 #' @param end_year End of year range
 #' @param arthropod Specify arthropod type from: 'mosquito', 'tick', 'nontick'
+#' @param agency_ids Filter on agency id, default to NULL for all available agencies,otherwise provide a vector of agency ids
 #' @keywords pools
 #' @return Dataframe of pools data
-#'
 #' @examples
 #' \dontrun{
 #' token = getToken()
-#' getPools(token, start_year = 2020, end_year = 2021, arthropod = 'tick')}
+#' getPools(token, start_year = 2020, end_year = 2021, arthropod = 'tick', 55)}
 #' @export
 
 
 
 
-getPools<- function(token, start_year, end_year, arthropod){
+getPools<- function(token, start_year, end_year, arthropod, agency_ids = NULL){
 
   valid_arthopods = c("tick", "mosquito", "nontick")
   if(!(is.numeric(start_year)) | !(is.numeric(end_year))){
@@ -35,7 +35,16 @@ getPools<- function(token, start_year, end_year, arthropod){
   if (any(!(arthropod %in% valid_arthopods))) {
     stop("Invaid arthropod type selected. Choose from: 'mosquito', 'tick', 'nontick'")
   }
-
+  # Handle multiple agency_ids
+  if (!is.null(agency_ids) & length(agency_ids) > 1) {
+    # If multiple agencies are provided, iterate over them, retrieve data, and merge
+    pools_list <- lapply(agency_ids, function(aid) {
+      getPools(token, start_year, end_year, arthropod, agency_ids = aid)
+    })
+    # Merge all the data together into a single dataframe
+    merged_pools <- bind_rows(pools_list)
+    return(merged_pools)
+  }
 
 
   url <- "https://api.vectorsurv.org/v1/arthropod/pool"
@@ -50,17 +59,22 @@ getPools<- function(token, start_year, end_year, arthropod){
   i=1
   while(i>0){
     params <- list(
-      #type = arthropod,
+       type = arthropod,
       `populate[]` = "agency",
       `populate[]` = "test",
       `populate[]` = "status",
       `populate[]` = "trap",
+      `populate[]` = "sex",
       `populate[]` = "species",
+      `populate[]` = "site",
+      `populate[]` = "location",
+
+
       pageSize = "1000",
       page= as.character(i),
       `query[surv_year][$between][0]` = start_year,
-      `query[surv_year][$between][1]` = end_year
-      # `query[agency]` = agency_id
+      `query[surv_year][$between][1]` = end_year,
+      `query[agency][0]` = agency_ids
 
 
     )
@@ -78,8 +92,8 @@ getPools<- function(token, start_year, end_year, arthropod){
       content <- content(response, as = "text")
       df_content = fromJSON(content, flatten = T)
       if(response$status_code!=200){
-        print(content(response, as = "parsed"))
-        stop("Error, see response above")
+
+        stop(content(response, as = "parsed"))
       }
       if(length(df_content$rows)<=0){break}
       pools =  rbind(pools, df_content$rows)
@@ -92,14 +106,26 @@ getPools<- function(token, start_year, end_year, arthropod){
 
     i=i+1
   }
+
+  if(nrow(pools)<=0){
+    return(data.frame())
+  }
+
   #Prevents conflicting data types within $test list
   pools$test=lapply(pools$test, as.data.frame)
   pools = pools%>%
     unnest(test, keep_empty = T, names_sep = "_")
   colnames(pools) =  str_replace(colnames(pools), "test_","")%>%
     str_replace_all(pattern = "\\.",replacement = "_")
-  colnames(pools)[c(1,5,13)] = c("pool_id","pool_comments","test_id")
+  colnames(pools)[c(1,5,11)] = c("pool_id","pool_comments","test_id")
 
+  pools$pool_longitude <- do.call(rbind, lapply(pools$location_shape_coordinates, function(x) unlist(x)))[,1]
+  pools$pool_latitude <- do.call(rbind, lapply(pools$location_shape_coordinates, function(x) unlist(x)))[,2]
+
+  pools=pools%>%select(pool_id,pool_num,agency_id,agency_code,agency_name,site_id,site_code,site_name,pool_longitude, pool_longitude,pool_latitude,primary_source,collection,pool_comments,
+                 surv_year,collection_date,species_display_name,species_full_name,sex_type,sex_name,trap_acronym,trap_name,trap_presence,num_count,test_id,value,test_date,
+                 method_name,method_acronym,target_acronym,target_vector,
+                 target_icd_10,status_name,test_agency_name,test_agency_code,test_agency_state_acronym, add_date ,updated)
   return(pools)
 
 }

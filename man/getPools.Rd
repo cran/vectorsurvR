@@ -4,7 +4,7 @@
 \alias{getPools}
 \title{Get Pools data}
 \usage{
-getPools(token, start_year, end_year, arthropod)
+getPools(token, start_year, end_year, arthropod, agency_ids = NULL)
 }
 \arguments{
 \item{token}{access token retrived from `getToken()`}
@@ -14,6 +14,8 @@ getPools(token, start_year, end_year, arthropod)
 \item{end_year}{End of year range}
 
 \item{arthropod}{Specify arthropod type from: 'mosquito', 'tick', 'nontick'}
+
+\item{agency_ids}{Filter on agency id, default to NULL for all available agencies,otherwise provide a vector of agency ids}
 }
 \value{
 Dataframe of pools data
@@ -24,6 +26,6 @@ Retrieves VectorSurv pools data for desired year range
 \examples{
 \dontrun{
 token = getToken()
-getPools(token, start_year = 2020, end_year = 2021, arthropod = 'tick')}
+getPools(token, start_year = 2020, end_year = 2021, arthropod = 'tick', 55)}
 }
 \keyword{pools}

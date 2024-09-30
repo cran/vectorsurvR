@@ -1,4 +1,4 @@
-#' @title Get Infection Rate
+#' @title Calculate infection rate
 #'
 #' @description `getInfectionRate()` requires at least five years prior to the target_year of arthro collections data to calculate for the specified parameters. The function uses the methods of the Gateway Abundance Anomaly calculator, and will not work if there is fewer than five years of data present.
 #' @param pools  Pools data retrieved from `getPools()`
@@ -9,7 +9,7 @@
 #' @param species_list Species filter for calculating infection rate species_display_name is the accepted notation. To see a list of species present in your data run `unique(pools$species_display_name)`. If species is unspecified, the default `NULL` will return data for all species in data.
 #' @param trap_list Trap filter for calculating infection rate. Trap_acronym is the is the accepted notation. Run `unique(pools$trap_acronym)` to see trap types present in your data. If trap_list is unspecified, the default `NULL` will return data for all trap types.
 #' @keywords pools infection rate
-#' @return Infection rate calculation
+#' @return Dataframe of infection rate calculation
 #' @examples
 #' getInfectionRate(sample_pools,
 #'                  interval = "Biweek",
@@ -38,7 +38,7 @@ getInfectionRate <- function(pools, interval, target_disease, pt_estimate, scale
 
     }
 
-  pools_columns <- c("pool_id", "collection_date", "surv_year", "num_count", "sex", "species_display_name", "trap_acronym", "target_acronym", "status_name")
+  pools_columns <- c("pool_id", "collection_date", "surv_year", "num_count", "sex_type", "species_display_name", "trap_acronym", "target_acronym", "status_name")
 
   if (!all(pools_columns %in% colnames(pools))) {
     stop("Insufficent pools data")

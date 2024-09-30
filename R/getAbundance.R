@@ -1,4 +1,4 @@
-#' @title Get abundance
+#' @title Calculate abundance
 #'
 #' @description Calculates abundance
 #' @param  collections Collections data retrieved from getArthroCollections()
@@ -6,7 +6,7 @@
 #' @param species_list Species filter for calculating abundance. Species_display_name is the accepted notation.To see a list of species present in your data run unique(collections$species_display_name). If species is unspecified, the default NULL will return data for all species in data.
 #' @param trap_list Trap filter for calculating abundance. Trap_acronym is the is the accepted notation. Run unique(collections$trap_acronym) to see trap types present in your data. If trap_list is unspecified, the default NULL will return data for all trap types.
 #' @param species_separate Should the species in species_list have abundance calculated separately? Setting to FALSE calculates the combined abundance. The same result can be performed by calculating on one species at the time.
-#' @return A dataframe of abundance values grouped by interval and filtered by parameters
+#' @return A dataframe of abundance calculations
 #' @export
 #' @examples
 #'
@@ -16,7 +16,7 @@
 #'              trap_list = list('GRVD', 'CO2'),
 #'              species_separate = FALSE)
 #' @export
-#' @importFrom dplyr summarise summarize filter group_by distinct_at vars arrange mutate desc
+#' @importFrom dplyr summarise summarize filter group_by distinct_at vars arrange mutate desc bind_rows
 #' @importFrom tidyr pivot_wider pivot_longer
 #' @importFrom lubridate year month epiweek today
 #' @importFrom utils tail
