@@ -131,10 +131,11 @@ getVectorIndex(sample_collections,
                sample_pools,
                interval = "Biweek",
                target_disease = "WNV",
-               pt_estimate = "bc-mle",
-               species = c("Cx tarsalis"), 
-               trap =  c("CO2"),
-               wide = FALSE)
+               pt_estimate = "bc-mle", 
+              
+               separate_by = c("agency","species"),
+               wide = FALSE) 
+sample_collections%>%filter(species_display_name=="Cx tarsalis", trap_acronym=="CO2")
 
 ## -----------------------------------------------------------------------------
 getPoolsComparisionTable(
@@ -175,4 +176,18 @@ library(DT)
 
 AbAnOutput %>%
   datatable(colnames =  c("Disease Year", "Biweek", "Count", "Species","Trap Type","Trap Events", "Abundance"))
+
+## -----------------------------------------------------------------------------
+
+table(vectorsurvR:::testing_collections$trap_acronym, vectorsurvR:::testing_collections$surv_year) %>%
+  kbl(align = "c") %>%
+  kable_paper(
+    full_width = F,
+    html_font = "arial",
+    lightable_options = "striped",
+  ) %>%
+  add_header_above(c("Trap Type", "Years" = 6)) %>%
+  footnote(general = "Table 3: Traps deployed by year", general_title = "") %>%
+  row_spec(c(3, 9, 10), background = "yellow") %>%
+  column_spec(c(4), background = "orange")
 

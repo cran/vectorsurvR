@@ -5,7 +5,7 @@
 #' @param start_year Start year of data
 #' @param end_year  End year of data
 #' @param arthropod Specify arthropod type from: 'mosquito', 'tick'
-#' @param agency_ids Filter on agency id, default to NULL for all available agencies,otherwise provide a vector of agency ids
+#' @param agency_ids Filter on agency id, default to NULL for all available agencies,otherwise provide a vector of agency ids, such as `agency_ids = c(55,56)`
 #' @return A dataframe of collections
 #' @importFrom jsonlite fromJSON
 #' @importFrom tidyr unnest
@@ -15,7 +15,7 @@
 #' @examples
 #' \dontrun{
 #' token = getToken()
-#' collections = getArthroCollections(token, 2021, 2022, 'mosquito',55, TRUE)}
+#' collections = getArthroCollections(token, 2021, 2022, 'mosquito',c(55,56), TRUE)}
 
 getArthroCollections <- function(token, start_year, end_year, arthropod, agency_ids = NULL){
 
@@ -113,10 +113,11 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
 
     #Prevents conflicting data types within $arthropods list
     collections$arthropods=lapply(collections$arthropods, as.data.frame)
+    collections$lures=lapply(collections$lures, as.data.frame)
+
     collections =
       collections%>%
       unnest(arthropods, keep_empty = T,names_sep ="_" )
-
     collections =
       collections%>%
       unnest(lures, keep_empty = T,names_sep ="_" )
@@ -124,7 +125,7 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
     colnames(collections) =  str_replace(colnames(collections), "arthropods_","")%>%
       str_replace_all(pattern = "\\.",replacement = "_")
     colnames(collections)[1] = 'collection_id'
-    collections = collections %>%  filter(!species_display_name%in%c("V pensylvanica","D variabilis" ,"D occidentalis","I pacificus","Dermacentor","V germanica"))
+    collections = collections %>%  dplyr::filter(!(species_display_name%in%c("V pensylvanica","D variabilis" ,"D occidentalis","I pacificus","Dermacentor","V germanica")))
 
     # separate collection location coordinates
     collections$collection_longitude <- do.call(rbind, lapply(collections$location_shape_coordinates, function(x) unlist(x)))[,1]
@@ -160,7 +161,7 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
       select(collection_id,collection_num, collection_date,
              agency_id, agency_code, agency_name, surv_year,
              comments,identified_by,species_display_name,
-             sex_name,sex_type,trap_acronym, lures_code, lures_description, lures_weight,num_trap,
+             sex_name,sex_type,trap_acronym,lures_id, lures_code, lures_description, lures_weight,num_trap,
              trap_nights,trap_problem_bit,num_count,
              site_id, site_code, site_name,collection_longitude,collection_latitude,city,postal_code, county,geoid, add_date,
              deactive_date, updated)
