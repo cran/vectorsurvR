@@ -6,28 +6,26 @@
 #' @param interval Calculation interval for abundance, accepts“Biweek”,“Week”, and “Month
 #' @param selected_features A character vector of spatial feature names to filter by
 #' @return A dataframe of collections with associated spatial regions
-#' @importFrom sf st_multipolygon st_sfc st_as_sf st_join st_crs st_transform st_make_valid st_cast st_is_valid
+#' @importFrom sf st_multipolygon st_sfc st_as_sf st_join st_crs st_transform st_make_valid st_cast st_is_valid st_within
 #' @importFrom dplyr filter mutate select
 #' @importFrom purrr map map_chr
 #' @export
 getAbundanceMapData <- function(collections, spatial, interval, selected_features = NULL) {
 
   #CHECK DATA FROM SAME SOURCES
-  if(!all(unique(collections$agency_id) %in% unique(spatial$agency))){
+  if(!all(unique(collections$agency_id) %in% unique(spatial$agency_id))){
     stop("Check spatial and collections data. Agency_ids do not match. Ensure same token is used to obtain both datasets")
   }
 
 
   # Retrieve spatial features
   spa <- spatial
-  colnames(spa)[grep("agency", colnames(spa))]="agency_id"
   # Return available spatial features if none selected
   if (is.null(selected_features)) {
     selected_features <- unique(spa$name)
   }
-
   # Filter selected spatial features
-  spa <- spa %>% filter(name %in% selected_features)
+  spa <- spa %>% dplyr::filter(name %in% selected_features)
 
 
 
@@ -87,6 +85,9 @@ getAbundanceMapData <- function(collections, spatial, interval, selected_feature
 
     spa_sf <- st_as_sf(spa)
 
+  }
+  else{
+    spa_sf=spa
   }
 
 
