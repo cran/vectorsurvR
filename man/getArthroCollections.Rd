@@ -4,7 +4,14 @@
 \alias{getArthroCollections}
 \title{Get arthropod collections data}
 \usage{
-getArthroCollections(token, start_year, end_year, arthropod, agency_ids = NULL)
+getArthroCollections(
+  token,
+  start_year,
+  end_year,
+  arthropod,
+  agency_ids = NULL,
+  spatial_features = NULL
+)
 }
 \arguments{
 \item{token}{A valid access token returned from `getToken()`}
@@ -16,9 +23,11 @@ getArthroCollections(token, start_year, end_year, arthropod, agency_ids = NULL)
 \item{arthropod}{Specify arthropod type from: 'mosquito', 'tick'}
 
 \item{agency_ids}{Filter on agency id, default to NULL for all available agencies,otherwise provide a vector of agency ids, such as `agency_ids = c(55,56)`}
+
+\item{spatial_features}{Filter data by spatial feature}
 }
 \value{
-A dataframe of collections
+A dataframe of collections data
 }
 \description{
 `getArthroCollections()` obtains collections data on a year range [start_year, end_year] for authorized VectorSurv Gateway accounts.
