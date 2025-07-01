@@ -121,7 +121,7 @@ getInfectionRate(sample_pools,
                       scale = 1000,
                       species = c("Cx pipiens", "Cx tarsalis"),
                       trap = c("CO2"),
-                      separate_by="species", wide = FALSE )
+                      separate_by="species")
 
 
 
@@ -133,8 +133,7 @@ getVectorIndex(sample_collections,
                target_disease = "WNV",
                pt_estimate = "bc-mle", 
               
-               separate_by = c("agency","species"),
-               wide = FALSE) 
+               separate_by = c("agency","species")) 
 sample_collections%>%filter(species_display_name=="Cx tarsalis", trap_acronym=="CO2")
 
 ## -----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # vectorsurvR Package Documentation and User Guide
 
-[vectorsurvR](https://CRAN.R-project.org/package=vectorsurvR)
+[![](https://CRAN.R-project.org/package=vectorsurvR)](https://CRAN.R-project.org/package=vectorsurvR)
 
 ## VectorSurv 
 

@@ -13,7 +13,7 @@
 #' @importFrom stats setNames
 #' @importFrom stringr str_replace str_replace_all
 #' @importFrom httr2 req_method resp_status resp_body_string req_perform req_url_query
-#' @importFrom sf st_intersects
+#' @importFrom sf st_intersects st_drop_geometry
 #' @importFrom dplyr bind_rows select if_else pull coalesce inner_join left_join
 #' @export
 #' @examples
@@ -23,6 +23,46 @@
 
 getArthroCollections <- function(token, start_year, end_year, arthropod, agency_ids = NULL, spatial_features=NULL) {
 
+  convert_to_sf <- function(coords) {
+
+    if (is.list(coords)) {
+      coords <- coords[[1]]  # Extract if it's a list of one element
+      longs <- coords[coords < 0]  # Values < 0 are longitudes
+      lats <- coords[coords > 0]   # Values > 0 are latitudes
+
+
+    }else{
+
+      # Convert string of numbers into a numeric vector
+      coords <- as.numeric(unlist(coords, recursive = TRUE))
+
+      # Ensure there's an even number of values
+      if (length(coords) %% 2 != 0) {
+        warning("Odd number of coordinates detected, skipping this entry.")
+        return(st_multipolygon())  # Return empty multipolygon
+      }
+
+      # Split into longitude and latitude
+      num_points <- length(coords) / 2
+      longs <- coords[1:num_points]
+      lats  <- coords[(num_points + 1):length(coords)]
+
+      # Ensure valid polygon (needs at least 3 points)
+      if (length(longs) < 3 || length(lats) < 3) {
+        warning("Skipping invalid polygon with fewer than 3 points.")
+        return(st_multipolygon())
+      }
+
+      # Close the polygon if necessary
+      if (!(longs[1] == longs[length(longs)] && lats[1] == lats[length(lats)])) {
+        longs <- c(longs, longs[1])
+        lats  <- c(lats, lats[1])
+      }
+    }
+    # Create coordinate matrix
+    coord_matrix <- cbind(longs, lats)
+    return(coord_matrix)
+  }
 
   valid_arthropods <- c("tick", "mosquito")
   if (!(arthropod %in% valid_arthropods)) stop("Invalid arthropod type: choose 'mosquito' or 'tick'")
@@ -48,110 +88,42 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
     })))
   }
 
-  all_data <- list()
-  i <- 1
+  # Spatial features processing
+  if(!is.null(spatial_features)) {
+    spatial <- getSpatialFeatures(token)
 
-  repeat {
-    req <- request(base_url)  %>%  req_method("GET") %>%
-      req_headers(
-        Authorization = paste("Bearer", token),
-        `Content-Type` = "application/json"
-      ) %>%
-      req_url_query(
-        !!!setNames(populate_params, rep("populate[]", length(populate_params))),
-        pageSize = "1000",
-        page = as.character(i),
-        `query[surv_year][$between][0]` = start_year,
-        `query[surv_year][$between][1]` = end_year,
-        `query[agency][0]` = if (!is.null(agency_ids)) agency_ids else NULL
-      )
+    # Validate spatial features exist
+    missing_features <- setdiff(spatial_features, spatial$name)
+    if(length(missing_features) > 0) {
+      warning("The following spatial features were not found: ",
+              paste(missing_features, collapse = ", "))
+      spatial_features <- setdiff(spatial_features, missing_features)
+    }
 
-    #spatial feature filter
-    # Spatial feature filter - updated for multiple features
-    if(!is.null(spatial_features)){
+    if(length(spatial_features) == 0) {
+      stop("No valid spatial features provided")
+    }
 
-      convert_to_sf <- function(coords) {
+    shapes <- spatial %>% filter(name %in% spatial_features)
 
-        if (is.list(coords)) {
-          coords <- coords[[1]]  # Extract if it's a list of one element
-          longs <- coords[coords < 0]  # Values < 0 are longitudes
-          lats <- coords[coords > 0]   # Values > 0 are latitudes
+    # Check for overlaps between features
+    overlaps <- sf::st_intersects(shapes, sparse = FALSE)
+    if(any(overlaps[lower.tri(overlaps)])) {
+      overlapping_pairs <- which(overlaps, arr.ind = TRUE) %>%
+        as.data.frame() %>%
+        filter(row < col) %>%
+        mutate(pair = paste(spatial_features[row], "&", spatial_features[col]))
+      warning("The following spatial features overlap:\n",
+              paste(unique(overlapping_pairs$pair), collapse = "\n"))
+    }
 
+    # If only one spatial feature, process normally
+    if(length(spatial_features) == 1) {
+      shape <- shapes[1,]
+      coords <- convert_to_sf(shape$shape.coordinates)
+      coord_list <- lapply(1:nrow(coords), function(i) unname(as.numeric(coords[i, ])))
+      geojson_coords <- list(list(coord_list))
 
-        }else{
-
-          # Convert string of numbers into a numeric vector
-          coords <- as.numeric(unlist(coords, recursive = TRUE))
-
-          # Ensure there's an even number of values
-          if (length(coords) %% 2 != 0) {
-            warning("Odd number of coordinates detected, skipping this entry.")
-            return(st_multipolygon())  # Return empty multipolygon
-          }
-
-          # Split into longitude and latitude
-          num_points <- length(coords) / 2
-          longs <- coords[1:num_points]
-          lats  <- coords[(num_points + 1):length(coords)]
-
-          # Ensure valid polygon (needs at least 3 points)
-          if (length(longs) < 3 || length(lats) < 3) {
-            warning("Skipping invalid polygon with fewer than 3 points.")
-            return(st_multipolygon())
-          }
-
-          # Close the polygon if necessary
-          if (!(longs[1] == longs[length(longs)] && lats[1] == lats[length(lats)])) {
-            longs <- c(longs, longs[1])
-            lats  <- c(lats, lats[1])
-          }
-        }
-        # Create coordinate matrix
-        coord_matrix <- cbind(longs, lats)
-        return(coord_matrix)
-      }
-      spatial = getSpatialFeatures(token)
-
-      # Validate spatial features exist
-      missing_features <- setdiff(spatial_features, spatial$name)
-      if(length(missing_features) > 0) {
-        warning("The following spatial features were not found: ",
-                paste(missing_features, collapse = ", "))
-        spatial_features <- setdiff(spatial_features, missing_features)
-      }
-
-      if(length(spatial_features) == 0) {
-        stop("No valid spatial features provided")
-      }
-
-      # Get all matching shapes
-      shapes <- spatial %>%
-        filter(name %in% spatial_features)
-
-      if(nrow(shapes) == 0) {
-        stop("No matching spatial features found")
-      }
-
-      # Process all shapes into single MultiPolygon
-      all_coords <- list()
-
-      for(i in seq_len(nrow(shapes))) {
-        shape <- shapes[i,]
-        coords <- convert_to_sf(shape$shape.coordinates)
-
-        # Convert coordinates to correct format
-        coord_list <- lapply(1:nrow(coords), function(i) {
-          unname(as.numeric(coords[i, ]))
-        })
-
-        # Add to our collection of polygons
-        all_coords <- c(all_coords, list(coord_list))
-      }
-
-      # Create single MultiPolygon with all features
-      geojson_coords <- list(all_coords)
-
-      # Build payload
       geojson_payload <- list(
         geojson = list(
           type = "Feature",
@@ -163,52 +135,190 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
         distance = list(max = 0)
       )
 
-      req <- req %>%
-        req_body_json(geojson_payload)
+      # Make single request with spatial filter
+      all_data <- list()
+      i <- 1
+      repeat {
+        req <- request(base_url) %>% req_method("GET") %>%
+          req_headers(
+            Authorization = paste("Bearer", token),
+            `Content-Type` = "application/json"
+          ) %>%
+          req_url_query(
+            !!!setNames(populate_params, rep("populate[]", length(populate_params))),
+            pageSize = "1000",
+            page = as.character(i),
+            `query[surv_year][$between][0]` = start_year,
+            `query[surv_year][$between][1]` = end_year,
+            `query[agency][0]` = if (!is.null(agency_ids)) agency_ids else NULL
+          ) %>%
+          req_body_json(geojson_payload)
 
-      # Check for overlapping features if multiple were provided
-      if(length(spatial_features) > 1) {
-        overlaps <- st_intersects(shapes, sparse = FALSE)
-        if(any(overlaps[lower.tri(overlaps)])) {
-          overlapping_pairs <- which(overlaps, arr.ind = TRUE) %>%
-            as.data.frame() %>%
-            filter(row < col) %>%
-            mutate(pair = paste(spatial_features[row], "&", spatial_features[col]))
-          warning("The following spatial features overlap:\n",
-                  paste(unique(overlapping_pairs$pair), collapse = "\n"))
+        resp <- req_perform(req)
+        if (resp_status(resp) != 200) {
+          stop("Failed request: ", resp_body_string(resp))
+        }
+
+        raw_json <- resp_body_string(resp)
+        df <- jsonlite::fromJSON(raw_json, flatten = TRUE)
+        if(length(df$rows) == 0) break
+
+        all_data[[i]] <- df$rows
+        i <- i + 1
+      }
+
+      if(length(all_data) == 0) return(data.frame())
+      collections <- bind_rows(all_data)
+
+    }
+    else {
+      # For multiple features, make separate requests
+      all_results <- list()
+
+      for(feature in spatial_features) {
+        feature_data <- list()
+        i <- 1
+
+        shape <- shapes %>% filter(name == feature)
+        coords <- convert_to_sf(shape$shape.coordinates)
+        coord_list <- lapply(1:nrow(coords), function(i) unname(as.numeric(coords[i, ])))
+        geojson_coords <- list(list(coord_list))
+
+        geojson_payload <- list(
+          geojson = list(
+            type = "Feature",
+            geometry = list(
+              type = "MultiPolygon",
+              coordinates = geojson_coords
+            )
+          ),
+          distance = list(max = 0)
+        )
+
+        repeat {
+          req <- request(base_url) %>% req_method("GET") %>%
+            req_headers(
+              Authorization = paste("Bearer", token),
+              `Content-Type` = "application/json"
+            ) %>%
+            req_url_query(
+              !!!setNames(populate_params, rep("populate[]", length(populate_params))),
+              pageSize = "1000",
+              page = as.character(i),
+              `query[surv_year][$between][0]` = start_year,
+              `query[surv_year][$between][1]` = end_year,
+              `query[agency][0]` = if (!is.null(agency_ids)) agency_ids else NULL
+            ) %>%
+            req_body_json(geojson_payload)
+
+          resp <- req_perform(req)
+          if (resp_status(resp) != 200) {
+            warning("Failed request for spatial feature: ", feature)
+            break
+          }
+
+          raw_json <- resp_body_string(resp)
+          df <- jsonlite::fromJSON(raw_json, flatten = TRUE)
+          if(length(df$rows) == 0) break
+
+          feature_data[[i]] <- df$rows
+          i <- i + 1
+        }
+
+        if(length(feature_data) > 0) {
+          all_results[[feature]] <- bind_rows(feature_data)
         }
       }
+
+      if(length(all_results) == 0) return(data.frame())
+      collections <- bind_rows(all_results)
+
     }
-    resp <- req_perform(req)
 
-    if (resp_status(resp) != 200) {
-      stop("Failed request: ", resp_body_string(resp))
+    collections$collection_longitude <- sapply(collections$location.shape.coordinates, function(x) unlist(x)[1])
+    collections$collection_latitude <- sapply(collections$location.shape.coordinates, function(x) unlist(x)[2])
+
+    # Convert collections to sf object for spatial join
+    collections_sf <- sf::st_as_sf(
+      collections,
+      coords = c("collection_longitude", "collection_latitude"),
+      crs = 4326
+    )
+
+    # Get the spatial features we filtered by
+    filtered_shapes <- spatial %>%
+      filter(name %in% spatial_features) %>%
+      select(name)
+
+    # Perform spatial join to identify which features contain each point
+    spatial_matches <- sf::st_join(collections_sf, filtered_shapes) %>%
+      st_drop_geometry()  # Convert back to regular dataframe
+
+    # Join the spatial feature info back to original collections
+    collections <- collections %>%
+      left_join(
+        spatial_matches %>%
+          group_by(id) %>%
+          summarize(
+            spatial_feature = paste(unique(na.omit(name)), collapse = ", "),
+            multiple_features = n_distinct(name) > 1
+          ),
+        by = "id"
+      )
+
+    # Handle points not in any spatial feature
+    collections <- collections %>%
+      mutate(
+        spatial_feature = ifelse(is.na(spatial_feature), NA_character_, spatial_feature),
+        multiple_features = ifelse(is.na(multiple_features), FALSE, multiple_features)
+      )
+  } else {
+    # Non-spatial filtered request
+    all_data <- list()
+    i <- 1
+
+    repeat {
+      req <- request(base_url) %>% req_method("GET") %>%
+        req_headers(
+          Authorization = paste("Bearer", token),
+          `Content-Type` = "application/json"
+        ) %>%
+        req_url_query(
+          !!!setNames(populate_params, rep("populate[]", length(populate_params))),
+          pageSize = "1000",
+          page = as.character(i),
+          `query[surv_year][$between][0]` = start_year,
+          `query[surv_year][$between][1]` = end_year,
+          `query[agency][0]` = if (!is.null(agency_ids)) agency_ids else NULL
+        )
+
+      resp <- req_perform(req)
+      if (resp_status(resp) != 200) {
+        stop("Failed request: ", resp_body_string(resp))
+      }
+
+      raw_json <- resp_body_string(resp)
+      df <- jsonlite::fromJSON(raw_json, flatten = TRUE)
+      if(length(df$rows) == 0) break
+
+      all_data[[i]] <- df$rows
+      i <- i + 1
     }
-    raw_json <- resp_body_string(resp)  # get raw JSON text
 
-    # Parse JSON and flatten nested fields automatically:
-    df <- jsonlite::fromJSON(raw_json, flatten = TRUE)
-    rows<-df$rows
-
-
-
-
-    if (length(rows) == 0) break
-    all_data[[i]] <- rows
-    i <- i + 1
+    if(length(all_data) == 0) return(data.frame())
+    collections <- bind_rows(all_data)
   }
-
-  if (length(all_data) == 0) return(data.frame())
-
-  collections <- bind_rows(all_data)
 
   if (arthropod == "mosquito") {
     collections$arthropods <- lapply(collections$arthropods, as.data.frame)
+
+    collections <- collections %>%
+      unnest(arthropods, keep_empty = TRUE, names_sep = "_")
     collections$lures <- lapply(collections$lures, as.data.frame)
 
     collections <- collections %>%
-      unnest(arthropods, keep_empty = TRUE, names_sep = "_") %>%
       unnest(lures, keep_empty = TRUE, names_sep = "_")
+
 
     colnames(collections) =  str_replace(colnames(collections), "arthropods_","")
 
@@ -242,14 +352,15 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
   sites = getSites(token)
   sites_zip = sites[c("id", "city", "postal_code", "region")] #selects the columns with relevant information, this can be changed of course
   regions = getRegions(token)
-  colnames(sites_zip)[1] = "site_id" #rename for join function
-
-  col_site = left_join(collections, sites_zip, by = 'site_id') #join site information to collections
   regions_county = regions[c("id","parent","type","geoid", "namelsad")] #select id and county name
   colnames(regions_county)[1] = "region" #rename for join function
   colnames(regions_county)[which(names(regions_county) == "type")] <- "region_type"
 
-  collections = left_join(col_site, regions_county, by = "region")
+  colnames(sites_zip)[1] = "site_id" #rename for join function
+
+  col_site = left_join(collections, sites_zip, by = 'site_id') #join site information to collections
+  region_site = left_join(sites_zip,regions_county, by="region")
+  collections = left_join(collections, region_site, by = "site_id")
 
   collections=collections %>%
     mutate(namelsad = if_else(!(region_type %in% c("state","county")),
@@ -260,33 +371,53 @@ getArthroCollections <- function(token, start_year, end_year, arthropod, agency_
                               # For geoid <= 5, keep the original 'namelsad'
                               namelsad))
 
-
   colnames(collections)[which(names(collections) == "namelsad")] <- "county"
 
 
-  if(arthropod=="mosquito"){
+  if(arthropod == "mosquito") {
     #remove unwanted/redundant columns
-    collections = collections %>%
-      select(collection_id,collection_num, collection_date,
-             agency_id, agency_code, agency_name, surv_year,
-             comments,identified_by,species_display_name,
-             sex_name,sex_type,trap_acronym,lures_id, lures_code, lures_description, lures_weight,num_trap,
-             trap_nights,trap_problem_bit,num_count,
-             site_id, site_code, site_name,collection_longitude,collection_latitude,city,postal_code, county,geoid, add_date,
-             deactive_date, updated)
-  }
-  if(arthropod=="tick"){
-    collections = collections %>%
-      select(collection_id,collection_num, collection_date_start,collection_date_end,
-             agency_id, agency_code, agency_name, surv_year,
-             comments,identified_by,species_display_name,
-             sex_name,sex_type,trap_acronym,bloodfed, attached, num_count,trap_problem_bit,sample_method_name,sample_method_value,host,humidity,wind_speed,temperature,conditions_moisture,conditions_sunlight,
-             site_id, site_code, site_name,collection_longitude,collection_latitude,city,postal_code, county,geoid, add_date,
-             deactive_date, updated)
-  }
 
-  collections <- collections %>%
-    select(where(~ !all(is.na(.)))) # Drop all-NA columns
+    if(!("lures_code"%in% colnames(collections))){
+      collections$lures_code = as.character(NA)
+      collections$lures_description =as.character(NA)
+      collections$lures_id =NA
+      collections$lures_weight = NA
+    }
+      base_cols <- c(
+        "collection_id", "collection_num", "collection_date",
+        "agency_id", "agency_code", "agency_name", "surv_year",
+        "comments", "identified_by", "species_display_name",
+        "sex_name", "sex_type", "trap_acronym", "lures_id",
+        "lures_code", "lures_description", "lures_weight", "num_trap",
+        "trap_nights", "trap_problem_bit", "num_count",
+        "site_id", "site_code", "site_name", "collection_longitude",
+        "collection_latitude", "city", "postal_code", "county", "geoid",
+        "add_date", "deactive_date", "updated"
+      )
+
+  }
+  if(arthropod == "tick") {
+    base_cols <- c(
+      "collection_id", "collection_num", "collection_date_start",
+      "collection_date_end", "agency_id", "agency_code", "agency_name",
+      "surv_year", "comments", "identified_by", "species_display_name",
+      "sex_name", "sex_type", "trap_acronym", "bloodfed", "attached",
+      "num_count", "trap_problem_bit", "sample_method_name",
+      "sample_method_value", "host", "humidity", "wind_speed",
+      "temperature", "conditions_moisture", "conditions_sunlight",
+      "site_id", "site_code", "site_name", "collection_longitude",
+      "collection_latitude", "city", "postal_code", "county", "geoid",
+      "add_date", "deactive_date", "updated"
+    )
+}
+    if(!is.null(spatial_features)) {
+      collections <- collections %>%
+        select(all_of(base_cols),spatial_feature, multiple_features)
+    } else {
+      collections <- collections %>%
+        select(all_of(base_cols))
+    }
 
   return(collections)
 }
+
