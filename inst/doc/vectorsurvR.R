@@ -15,25 +15,25 @@ library(vectorsurvR)
 
 
 ## ----results='hide', eval=F---------------------------------------------------
-#  
-#  token = getToken()
-#  
+# 
+# token = getToken()
+# 
 
 ## ----eval=F, echo=T-----------------------------------------------------------
-#  #Example
-#  collections = getArthroCollections(token, 2022,2023, 'mosquito',55)
+# #Example
+# collections = getArthroCollections(token, 2022,2023, 'mosquito',55)
 
 ## ----eval=F, echo=T-----------------------------------------------------------
-#  #Example
-#  pools = getPools(token, 2022,2023, 'mosquito')
+# #Example
+# pools = getPools(token, 2022,2023, 'mosquito')
 
 ## ----eval=F, echo=T-----------------------------------------------------------
-#  #creates a file named "collections_18_23.csv" in your current directory
-#  write.csv(x = collections, file = "collections_22_23.csv")
-#  
-#  #loads collections data
-#  collections = read.csv("collections_22_23.csv")
-#  
+# #creates a file named "collections_18_23.csv" in your current directory
+# write.csv(x = collections, file = "collections_22_23.csv")
+# 
+# #loads collections data
+# collections = read.csv("collections_22_23.csv")
+# 
 
 ## -----------------------------------------------------------------------------
 #Subset using column names or index number
