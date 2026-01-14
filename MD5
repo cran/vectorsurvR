@@ -1,16 +1,16 @@
-7553d3c0303f1fcf9b4d40a75302d510 *DESCRIPTION
+b7bd4cf7c3c219379c7e3a1745b740e5 *DESCRIPTION
 86d3e4d9ce866c55db89bb58dc3b706b *NAMESPACE
 3f1ea378e15d96b08146d661ac31d9a6 *R/data.R
 e3d898eee77445e32e9adc3e34c8cadb *R/getAbundance.R
 9d72fcd07c601ea82bc4cc74c0c1ee5e *R/getAbundanceAnomaly.R
 fe1df214946ab1e16ad5bd54fea24c1e *R/getArthroCollections.R
 3f420f92564b464c4c73052b6f7159db *R/getInfectionRate.R
-88d2d18e14df87c2ad9ad858fcdef11e *R/getPools.R
+e7617d7f02cbf0832ce8274282e62274 *R/getPools.R
 d9e434f2bcdb7f3d2c6040da9915f6be *R/getPoolsComparisonTable.R
 53214230cecb73389376eadf904aa739 *R/getRegions.R
 40511acc1487e59c9a5900cdd6d8dd8f *R/getSites.R
 89effdbc42e0ca40e3e03071047333ac *R/getSpatialFeatures.R
-12514a308b41a9278807a26bdc0676ca *R/getSpeciesTable.R
+d2e3357961da7df5e7bf0079a12ced23 *R/getSpeciesTable.R
 ac0e135006f9ac26db9bdf059a9fd1d3 *R/getToken.R
 53f717dfba32656a6335b8f48b1186cd *R/getVectorIndex.R
 f7c7f85aee47990669d65b6a91804270 *R/globals.R
@@ -27,7 +27,7 @@ d16f551ee30658ba3625898801c44192 *data/sample_pools.rda
 457d80cb79d4b06dfaaaa893e88c2e34 *data/sample_spatial.rda
 2e45da1460af235fcc6565d1f3e778e4 *inst/doc/vectorsurvR.R
 a86a53d1d0759c35729ce8d729af7a52 *inst/doc/vectorsurvR.Rmd
-3e97e9ae0720eb20751ba81c25350b98 *inst/doc/vectorsurvR.html
+ee38662feeaf08bf5a3e223956e4b0a1 *inst/doc/vectorsurvR.html
 f9ec37541085a13f93717456f03b6202 *man/getAbundance.Rd
 a79ade5fffa19836ddc0dd98e31eecee *man/getAbundanceAnomaly.Rd
 2be21169736fd01081bf2fa9ea8584d8 *man/getArthroCollections.Rd
@@ -37,7 +37,7 @@ b464ff39e97a170e55e89a1e68ae46f8 *man/getPools.Rd
 cedde67f7e38b2d490e08f67b7a37f16 *man/getRegions.Rd
 8305b79675bd4c6be19a26795bcb47dd *man/getSites.Rd
 c27f9f9b2f0018afc5e012c82157275d *man/getSpatialFeatures.Rd
-2bb0c80a28c4ee52165d5a1481f7fea1 *man/getSpeciesTable.Rd
+fe7933d6ed4139867e1c644f5249bae7 *man/getSpeciesTable.Rd
 621b5c322b216c4f59149a4b6f36fc93 *man/getToken.Rd
 f07d285f10ef78cfada5adc63245b8e9 *man/getVectorIndex.Rd
 774d9de8e95aa151215efcd304549d41 *man/pipe.Rd
@@ -54,7 +54,7 @@ dd7e9b188c3f03262c4bfbd6a9e777c4 *man/sample_pools.Rd
 d7d9d34a2179f311cf09403b1b8be1b7 *tests/testthat/test-getArthroCollections.R
 43e76fc8e01fde89fdc301323c56553f *tests/testthat/test-getInfectionRate.R
 9b9fcd1a7ce8f5e3f61fa7244c970c1f *tests/testthat/test-getPools.R
-d7210efd3679bea59f9b2b1b61a878a5 *tests/testthat/test-getSpeciesTable.R
+d771f94bd3c90c748ba7fe09a640364e *tests/testthat/test-getSpeciesTable.R
 bd1239a76bb587494c334690c9ba12e9 *tests/testthat/test-getToken.R
 78fcfbdb34dbf255af80de97b01676f0 *tests/testthat/test-getVectorIndex.R
 8dbdd495fbdb7962e8cb8cfa1f5a9206 *tests/testthat/test-plotVectorAbundance.R
